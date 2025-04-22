@@ -19,8 +19,8 @@ def whats_new(session):
     whats_new_url = urljoin(MAIN_DOC_URL, 'whatsnew/')
     response = get_response(session, whats_new_url)
     soup = BeautifulSoup(response.text, 'lxml')
-    news = find_tag(soup, 'div', class_='toctree-wrapper compound')
-    news_link = news.find_all('li', class_='toctree-l1')
+    news = find_tag(soup, 'div', attrs={'class': 'toctree-wrapper compound'})
+    news_link = news.find_all('li', attrs={'class': 'toctree-l1'})
     results = [('Ссылка на статью', 'Заголовок', 'Редактор, автор')]
     for section in tqdm(news_link):
         version_a_tag = find_tag(section, 'a')
@@ -94,7 +94,7 @@ def download(session):
     logging.info(f'Архив был загружен и сохранён: {archive_path}')
 
 
-def parse_pep_statuses(session):
+def pep(session):
     """Основная функция парсинга статусов PEP."""
     response = get_response(session, PEP_URL)
     if not response:
@@ -223,7 +223,7 @@ MODE_TO_FUNCTION = {
     'whats-new': whats_new,
     'latest-versions': latest_versions,
     'download': download,
-    'pep': parse_pep_statuses,
+    'pep': pep,
 }
 
 
