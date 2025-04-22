@@ -1,0 +1,28 @@
+import logging
+
+from requests import RequestException
+
+from exceptions import ParserFindTagException
+
+
+def get_response(session, url):
+    """Выполняет запрос с обработкой ошибок."""
+    try:
+        response = session.get(url)
+        response.encoding = 'utf-8'
+        return response
+    except RequestException:
+        logging.exception(
+            f'Возникла ошибка при загрузке страницы {url}',
+            stack_info=True
+        )
+
+
+def find_tag(soup, tag, attrs=None, string=None):
+    """Находит тег с обработкой ошибок."""
+    searched_tag = soup.find(tag, attrs=(attrs or {}), string=string)
+    if searched_tag is None:
+        error_msg = f'Не найден тег {tag} {attrs}'
+        logging.error(error_msg)
+        raise ParserFindTagException(error_msg)
+    return searched_tag
