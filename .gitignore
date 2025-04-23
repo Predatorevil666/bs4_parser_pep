@@ -122,6 +122,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+.ruff_cache/
 .dmypy.json
 dmypy.json
 
@@ -147,3 +148,4 @@ dmypy.json
 http_cache.sqlite
 downloads/
 logs/
+pyproject.toml

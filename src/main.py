@@ -16,6 +16,8 @@ from utils import find_tag, get_response
 
 
 def whats_new(session):
+    """Парсит список нововведений в Python из официальной документации."""
+
     whats_new_url = urljoin(MAIN_DOC_URL, "whatsnew/")
     response = get_response(session, whats_new_url)
     soup = BeautifulSoup(response.text, "lxml")
@@ -37,6 +39,9 @@ def whats_new(session):
 
 
 def latest_versions(session):
+    """Парсит список всех версий Python
+       из раздела документации 'All versions'.
+    """
     response = get_response(session, MAIN_DOC_URL)
     soup = BeautifulSoup(response.text, "lxml")
     sidebar = find_tag(soup, "div", {"class": "sphinxsidebarwrapper"})
@@ -61,6 +66,8 @@ def latest_versions(session):
 
 
 def download(session):
+    """Скачивает архив с документацией Python в формате PDF."""
+
     downloads_url = urljoin(MAIN_DOC_URL, "download.html")
     response = get_response(session, downloads_url)
     soup = BeautifulSoup(response.text, "lxml")
