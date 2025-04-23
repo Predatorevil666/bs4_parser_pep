@@ -44,7 +44,6 @@ python src/main.py <режим> [аргументы]
 | -c, --clear-cache      | Очистка кеша                      |
 | -o [pretty\|file]      | Формат вывода (консоль/файл)      |
 ## Примеры использования
-bash
 
 ### Показать нововведения с красивым выводом
 ```bash
@@ -61,24 +60,28 @@ python src/main.py latest-versions -c
 ```
 📂 Структура проекта
 
+## 📁 Структура проекта
+
+```
 bs4_parser_pep/
-├── src/ # Исходный код
-│ ├── init.py
-│ ├── configs.py → Настройки парсера
-│ ├── constants.py → URL и константы
-│ ├── exceptions.py → Кастомные ошибки
-│ ├── main.py → Основная логика
-│ ├── outputs.py → Вывод результатов
-│ └── utils.py → Вспомогательные утилиты
-├── tests/ # Тесты
-│ ├── fixture_data/ → Тестовые данные
-│ └── test_*.py → Модульные тесты
-├── requirements.txt → Зависимости
-└── README.md → Документация
+├── src/                   # Исходный код
+│   ├── __init__.py
+│   ├── configs.py         → Настройки парсера
+│   ├── constants.py       → URL и константы
+│   ├── exceptions.py      → Кастомные ошибки
+│   ├── main.py           → Основная логика
+│   ├── outputs.py         → Вывод результатов
+│   └── utils.py           → Вспомогательные утилиты
+├── tests/                 # Тесты
+│   ├── fixture_data/      → Тестовые данные
+│   └── test_*.py          → Модульные тесты
+├── requirements.txt       → Зависимости
+└── README.md              → Документация
+```
 
 🔧 Технологии
 
-    Python 3.7+
+    Python 3.10+
 
     BeautifulSoup4 - парсинг HTML/XML
 
