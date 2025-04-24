@@ -1,4 +1,6 @@
 class ParserFindTagException(Exception):
     """Вызывается, когда парсер не может найти тег."""
 
-    pass
+
+class ParserHTTPException(Exception):
+    """Вызывается при ошибках HTTP-запросов."""
