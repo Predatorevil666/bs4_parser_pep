@@ -8,8 +8,6 @@ PEP_URL = "https://peps.python.org/numerical/"
 BASE_DIR = Path(__file__).parent
 LOG_DIR = BASE_DIR / "logs"
 LOG_FILE = LOG_DIR / "parser.log"
-RESULTS_DIR = BASE_DIR / "results"
-DOWNLOADS_DIR = BASE_DIR / "downloads"
 
 # Форматы даты и времени
 DATETIME_FORMAT = "%Y-%m-%d_%H-%M-%S"

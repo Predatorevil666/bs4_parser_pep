@@ -12,7 +12,6 @@ from tqdm import tqdm
 
 from configs import configure_argument_parser, configure_logging
 from constants import (
-    DOWNLOADS_DIR,
     EXPECTED_STATUS,
     LOG_ARCHIVE_SAVED,
     LOG_ARGS_CMD,
@@ -129,27 +128,30 @@ def latest_versions(session):
 
 
 def download(session):
-    """Скачивает архив с документацией Python в формате PDF."""
+    """
+    Скачивает архив с документацией Python в формате PDF
+    или создаёт пустой файл.
+    """
+    # Prepare downloads directory (patchable by tests)
+    download_dir = BASE_DIR / "downloads"
+    download_dir.mkdir(exist_ok=True)
     soup = fetch_and_parse(session, urljoin(MAIN_DOC_URL, "download.html"))
-    if not soup:
-        return
 
-    pdf_a4_tag = soup.select_one('table.docutils a[href$="pdf-a4.zip"]')
-
-    if not pdf_a4_tag:
+    pdf_a4_tag = (
+        soup.select_one('table.docutils a[href$="pdf-a4.zip"]')
+        if soup
+        else None
+    )
+    if not pdf_a4_tag or "href" not in pdf_a4_tag.attrs:
         raise ParserFindTagException("Не найдена ссылка на PDF архив")
-    if "href" not in pdf_a4_tag.attrs:
-        raise ParserFindTagException("У ссылки отсутствует атрибут href")
-
     archive_url = urljoin(MAIN_DOC_URL, pdf_a4_tag["href"])
-    _download_file(session, archive_url, DOWNLOADS_DIR)
+    _download_file(session, archive_url, download_dir)
 
 
-def _download_file(session, url, DOWNLOADS_DIR):
+def _download_file(session, url, download_dir):
     """Вспомогательная функция для загрузки файла."""
     filename = url.split("/")[-1]
-    DOWNLOADS_DIR.mkdir(exist_ok=True)
-    file_path = DOWNLOADS_DIR / filename
+    file_path = download_dir / filename
 
     try:
         response = session.get(url, stream=True)

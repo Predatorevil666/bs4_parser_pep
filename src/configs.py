@@ -20,15 +20,11 @@ def configure_argument_parser(available_modes):
         description="Парсер документации Python и PEP"
     )
     parser.add_argument(
-        "mode",
-        choices=available_modes,
-        help="Режимы работы парсера"
+        "mode", choices=available_modes, help="Режимы работы парсера"
     )
     parser.add_argument(
-        "-c",
-        "--clear-cache",
-        action="store_true",
-        help="Очистка кеша")
+        "-c", "--clear-cache", action="store_true", help="Очистка кеша"
+    )
     parser.add_argument(
         "-o",
         "--output",
@@ -41,10 +37,7 @@ def configure_argument_parser(available_modes):
 def configure_logging():
     LOG_DIR.mkdir(exist_ok=True)
     rotating_handler = RotatingFileHandler(
-        LOG_FILE,
-        MAX_BYTES,
-        BACKUP_COUNT,
-        encoding="utf-8"
+        LOG_FILE, MAX_BYTES, BACKUP_COUNT, encoding="utf-8"
     )
     logging.basicConfig(
         datefmt=DT_FORMAT,
