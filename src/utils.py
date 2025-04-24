@@ -11,8 +11,7 @@ def get_response(session, url):
         return response
     except RequestException as e:
         raise ParserHTTPException(
-            f"Ошибка при загрузке страницы {url}: {str(e)}"
-        )
+            f"Ошибка при загрузке страницы {url}: {str(e)}")
 
 
 def find_tag(soup, tag, attrs=None, string=None):

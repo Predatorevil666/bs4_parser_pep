@@ -1,6 +1,7 @@
 import logging
 import re
 
+from pathlib import Path
 from urllib.parse import urljoin
 
 import requests_cache
@@ -35,6 +36,8 @@ from constants import (
 from exceptions import ParserFindTagException, ParserHTTPException
 from outputs import control_output
 from utils import find_tag, get_response
+
+BASE_DIR = Path(__file__).parent
 
 
 def fetch_and_parse(session, url):
@@ -196,17 +199,14 @@ def pep(session):
 
                 link_tag = cols[1].select_one("a")
                 pep_url = urljoin(PEP_URL, link_tag["href"])
-                print(pep_url)
 
                 page_status = get_pep_status(session, pep_url)
-                compare_statuses(
-                    page_status, table_status, pep_url, status_mismatches
-                )
+                compare_statuses(page_status, table_status,
+                                 pep_url, status_mismatches)
 
                 if page_status:
-                    status_counter[page_status] = (
-                        status_counter.get(page_status, 0) + 1
-                    )
+                    status_counter[page_status] = status_counter.get(
+                        page_status, 0) + 1
 
             except (ParserFindTagException, KeyError, AttributeError) as e:
                 errors.append(f"{pep_url}: {str(e)}")
@@ -229,8 +229,18 @@ def get_pep_status(session, pep_url):
         if not soup:
             return None
 
-        status_tag = soup.find("dt", string="Status:").find_next_sibling("dd")
-        return status_tag.text.strip() if status_tag else None
+        status_dt = next(
+            (
+                dt
+                for dt in soup.find_all("dt")
+                if dt.get_text(strip=True).startswith("Status")
+            ),
+            None,
+        )
+        if not status_dt:
+            return None
+        status_dd = status_dt.find_next_sibling("dd")
+        return status_dd.get_text(strip=True) if status_dd else None
 
     except (ParserFindTagException, AttributeError) as e:
         logging.debug(LOG_RECIEVE_STATUS.format(pep_url, str(e)))

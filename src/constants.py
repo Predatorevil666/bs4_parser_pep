@@ -2,7 +2,7 @@ from pathlib import Path
 
 # URL-адреса
 MAIN_DOC_URL = "https://docs.python.org/3/"
-PEP_URL = " https://peps.python.org/numerical/"
+PEP_URL = "https://peps.python.org/numerical/"
 
 # Пути и директории
 BASE_DIR = Path(__file__).parent
@@ -58,3 +58,4 @@ LOG_CRITICAL_ERROR_IN_MODE = "Критическая ошибка в режим�
 LOG_PARSER_STOP_BY_USER = "Работа парсера прервана пользователем"
 LOG_UNEXPECTED_ERROR = "Непредвиденная ошибка: {}"
 LOG_RECIEVE_STATUS = "Ошибка получения статуса {}: {}"
+LOG_FILE_SAVED = "Файл с результатами был сохранён: {}"
