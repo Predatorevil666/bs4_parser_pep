@@ -48,12 +48,10 @@ LOG_STATUS_MISMATCH_ENTRY = (
 )
 LOG_SKIPP_VERSION = "Пропущена версия: {}"
 LOG_SKIPP_PEP = "Пропуск PEP: {}"
-LOG_PARSER_VERSION_ERROR = "Ошибка при парсинге версий: {}"
 LOG_DOWNLOAD_START = "Начата загрузка файла: {}"
 LOG_DOWNLOAD_ERROR = "Ошибка при загрузке {}: {}"
 LOG_CRITICAL_ERROR = "Критическая ошибка: {}"
 LOG_CRITICAL_ERROR_IN_MODE = "Критическая ошибка в режиме '{}': {}"
 LOG_PARSER_STOP_BY_USER = "Работа парсера прервана пользователем"
 LOG_UNEXPECTED_ERROR = "Непредвиденная ошибка: {}"
-LOG_RECIEVE_STATUS = "Ошибка получения статуса {}: {}"
 LOG_FILE_SAVED = "Файл с результатами был сохранён: {}"

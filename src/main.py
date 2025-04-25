@@ -1,12 +1,12 @@
 import logging
 import re
 
+from collections import defaultdict
 from pathlib import Path
 from urllib.parse import urljoin
 
 import requests_cache
 
-from bs4 import BeautifulSoup
 from requests import RequestException
 from tqdm import tqdm
 
@@ -22,8 +22,6 @@ from constants import (
     LOG_PARSER_START,
     LOG_PARSER_STOP,
     LOG_PARSER_STOP_BY_USER,
-    LOG_PARSER_VERSION_ERROR,
-    LOG_RECIEVE_STATUS,
     LOG_SKIPP_PEP,
     LOG_SKIPP_VERSION,
     LOG_STATUS_MISMATCH_ENTRY,
@@ -34,19 +32,9 @@ from constants import (
 )
 from exceptions import ParserFindTagException, ParserHTTPException
 from outputs import control_output
-from utils import find_tag, get_response
+from utils import fetch_and_parse, find_tag
 
 BASE_DIR = Path(__file__).parent
-
-
-def fetch_and_parse(session, url):
-    """Выполняет запрос и возвращает BeautifulSoup объект."""
-    try:
-        response = get_response(session, url)
-        return BeautifulSoup(response.text, "lxml")
-    except ParserHTTPException as e:
-        logging.error(str(e))
-        return None
 
 
 def whats_new(session):
@@ -54,40 +42,28 @@ def whats_new(session):
     errors = []
     whats_new_url = urljoin(MAIN_DOC_URL, "whatsnew/")
     soup = fetch_and_parse(session, whats_new_url)
-    if not soup:
-        return None
-
     results = [("Ссылка на статью", "Заголовок", "Редактор, автор")]
 
-    try:
-        news_items = soup.select(
-            "#what-s-new-in-python div.toctree-wrapper li.toctree-l1"
-        )
+    news_items = soup.select(
+        "#what-s-new-in-python div.toctree-wrapper li.toctree-l1"
+    )
 
-        for section in tqdm(news_items, desc="Обработка новостей"):
-            try:
-                version_a_tag = find_tag(section, "a")
-                href = version_a_tag["href"]
-                version_link = urljoin(whats_new_url, href)
-                article_soup = fetch_and_parse(session, version_link)
-                if not article_soup:
-                    errors.append(f"Ошибка загрузки: {version_link}")
-                    continue
-                results.append(
-                    (
-                        version_link,
-                        find_tag(article_soup, "h1").text,
-                        find_tag(article_soup, "dl").text.replace("\n", " "),
-                    )
+    for section in tqdm(news_items, desc="Обработка новостей"):
+        try:
+            version_a_tag = find_tag(section, "a")
+            href = version_a_tag["href"]
+            version_link = urljoin(whats_new_url, href)
+            article_soup = fetch_and_parse(session, version_link)
+            results.append(
+                (
+                    version_link,
+                    find_tag(article_soup, "h1").text,
+                    find_tag(article_soup, "dl").text.replace("\n", " "),
                 )
+            )
 
-            except ParserFindTagException as e:
-                errors.append(str(e))
-                continue
-
-    except ParserFindTagException as e:
-        logging.error(str(e))
-        return None
+        except (ParserFindTagException, ParserHTTPException) as e:
+            errors.append(str(e))
 
     for error in errors:
         logging.debug(error)
@@ -97,32 +73,27 @@ def whats_new(session):
 
 def latest_versions(session):
     """Парсит список всех версий Python."""
+    errors = []
     soup = fetch_and_parse(session, MAIN_DOC_URL)
-    if not soup:
-        return None
-
     results = [("Ссылка на документацию", "Версия", "Статус")]
     pattern = r"Python (?P<version>\d\.\d+) \((?P<status>.*)\)"
 
-    try:
-        version_links = soup.select(
-            'div.sphinxsidebarwrapper ul:contains("All versions") a'
-        )
+    version_links = soup.select(
+        'div.sphinxsidebarwrapper ul:contains("All versions") a'
+    )
 
-        for link in tqdm(version_links, desc="Обработка версий"):
-            try:
-                text_match = re.search(pattern, link.text)
-                version, status = (
-                    text_match.groups() if text_match else (link.text, "")
-                )
-                results.append((version, status, link["href"]))
-            except (KeyError, AttributeError) as e:
-                logging.debug(LOG_SKIPP_VERSION.format(str(e)))
-                continue
+    for link in tqdm(version_links, desc="Обработка версий"):
+        try:
+            text_match = re.search(pattern, link.text)
+            version, status = (
+                text_match.groups() if text_match else (link.text, "")
+            )
+            results.append((version, status, link["href"]))
+        except (KeyError, AttributeError, re.error) as e:
+            errors.append(f"Ссылка {link.get('href', '')}: {str(e)}")
 
-    except Exception as e:
-        logging.error(LOG_PARSER_VERSION_ERROR.format(str(e)))
-        return None
+    for error in errors:
+        logging.debug(LOG_SKIPP_VERSION.format(error))
 
     return results
 
@@ -132,7 +103,7 @@ def download(session):
     Скачивает архив с документацией Python в формате PDF
     или создаёт пустой файл.
     """
-    # Prepare downloads directory (patchable by tests)
+
     download_dir = BASE_DIR / "downloads"
     download_dir.mkdir(exist_ok=True)
     soup = fetch_and_parse(session, urljoin(MAIN_DOC_URL, "download.html"))
@@ -154,35 +125,25 @@ def _download_file(session, url, download_dir):
     file_path = download_dir / filename
 
     try:
-        response = session.get(url, stream=True)
+        logging.info(LOG_DOWNLOAD_START.format(filename))
+        response = session.get(url)
         response.raise_for_status()
+
+        with open(file_path, "wb") as file:
+            file.write(response.content)
+
+        logging.info(LOG_ARCHIVE_SAVED.format(file_path))
+
     except RequestException as e:
         error_msg = LOG_DOWNLOAD_ERROR.format(filename, str(e))
         logging.error(error_msg)
         raise ParserHTTPException(error_msg)
 
-    total_size = int(response.headers.get("content-length", 0))
-    logging.info(LOG_DOWNLOAD_START.format(filename))
-    with open(file_path, "wb") as file:
-        for chunk in tqdm(
-            response.iter_content(chunk_size=1024),
-            total=total_size // 1024 + 1,
-            unit="KB",
-            desc=filename,
-            leave=True,
-        ):
-            if chunk:
-                file.write(chunk)
-    logging.info(LOG_ARCHIVE_SAVED.format(file_path))
-
 
 def pep(session):
     """Анализирует статусы PEP."""
     soup = fetch_and_parse(session, PEP_URL)
-    if not soup:
-        return None
-
-    status_counter = {}
+    status_counter = defaultdict(int)
     status_mismatches = []
     errors = []
 
@@ -203,16 +164,15 @@ def pep(session):
                 pep_url = urljoin(PEP_URL, link_tag["href"])
 
                 page_status = get_pep_status(session, pep_url)
-                compare_statuses(page_status, table_status,
-                                 pep_url, status_mismatches)
+                compare_statuses(
+                    page_status, table_status, pep_url, status_mismatches
+                )
 
                 if page_status:
-                    status_counter[page_status] = status_counter.get(
-                        page_status, 0) + 1
+                    status_counter[page_status] += 1
 
             except (ParserFindTagException, KeyError, AttributeError) as e:
                 errors.append(f"{pep_url}: {str(e)}")
-                continue
 
         for error in errors:
             logging.debug(LOG_SKIPP_PEP.format(error))
@@ -226,27 +186,19 @@ def pep(session):
 
 def get_pep_status(session, pep_url):
     """Получает статус PEP со страницы."""
-    try:
-        soup = fetch_and_parse(session, pep_url)
-        if not soup:
-            return None
-
-        status_dt = next(
-            (
-                dt
-                for dt in soup.find_all("dt")
-                if dt.get_text(strip=True).startswith("Status")
-            ),
-            None,
-        )
-        if not status_dt:
-            return None
-        status_dd = status_dt.find_next_sibling("dd")
-        return status_dd.get_text(strip=True) if status_dd else None
-
-    except (ParserFindTagException, AttributeError) as e:
-        logging.debug(LOG_RECIEVE_STATUS.format(pep_url, str(e)))
+    soup = fetch_and_parse(session, pep_url)
+    status_dt = next(
+        (
+            dt
+            for dt in soup.find_all("dt")
+            if dt.get_text(strip=True).startswith("Status")
+        ),
+        None,
+    )
+    if not status_dt:
         return None
+    status_dd = status_dt.find_next_sibling("dd")
+    return status_dd.get_text(strip=True) if status_dd else None
 
 
 def compare_statuses(page_status, table_status, pep_url, mismatches):
