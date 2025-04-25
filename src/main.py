@@ -15,7 +15,6 @@ from constants import (
     EXPECTED_STATUS,
     LOG_ARCHIVE_SAVED,
     LOG_ARGS_CMD,
-    LOG_CRITICAL_ERROR,
     LOG_CRITICAL_ERROR_IN_MODE,
     LOG_DOWNLOAD_ERROR,
     LOG_DOWNLOAD_START,
@@ -89,7 +88,7 @@ def latest_versions(session):
                 text_match.groups() if text_match else (link.text, "")
             )
             results.append((version, status, link["href"]))
-        except (KeyError, AttributeError, re.error) as e:
+        except (KeyError, AttributeError) as e:
             errors.append(f"Ссылка {link.get('href', '')}: {str(e)}")
 
     for error in errors:
@@ -110,8 +109,6 @@ def download(session):
 
     pdf_a4_tag = (
         soup.select_one('table.docutils a[href$="pdf-a4.zip"]')
-        if soup
-        else None
     )
     if not pdf_a4_tag or "href" not in pdf_a4_tag.attrs:
         raise ParserFindTagException("Не найдена ссылка на PDF архив")
@@ -147,41 +144,36 @@ def pep(session):
     status_mismatches = []
     errors = []
 
-    try:
-        section = soup.select_one("section#numerical-index")
-        rows = section.select("tbody tr")
+    section = soup.select_one("section#numerical-index")
+    rows = section.select("tbody tr")
 
-        for row in tqdm(rows, desc="Обработка PEP"):
-            try:
-                cols = row.find_all("td")
-                if len(cols) < 5:
-                    continue
+    for row in tqdm(rows, desc="Обработка PEP"):
+        try:
+            cols = row.find_all("td")
+            if len(cols) < 5:
+                continue
 
-                status_abbr = cols[0].select_one("abbr")
-                table_status = status_abbr["title"] if status_abbr else ""
+            status_abbr = cols[0].select_one("abbr")
+            table_status = status_abbr["title"] if status_abbr else ""
 
-                link_tag = cols[1].select_one("a")
-                pep_url = urljoin(PEP_URL, link_tag["href"])
+            link_tag = cols[1].select_one("a")
+            pep_url = urljoin(PEP_URL, link_tag["href"])
 
-                page_status = get_pep_status(session, pep_url)
-                compare_statuses(
-                    page_status, table_status, pep_url, status_mismatches
-                )
+            page_status = get_pep_status(session, pep_url)
+            compare_statuses(
+                page_status, table_status, pep_url, status_mismatches
+            )
 
-                if page_status:
-                    status_counter[page_status] += 1
+            if page_status:
+                status_counter[page_status] += 1
 
-            except (ParserFindTagException, KeyError, AttributeError) as e:
-                errors.append(f"{pep_url}: {str(e)}")
+        except (ParserFindTagException, KeyError, AttributeError) as e:
+            errors.append(f"{pep_url}: {str(e)}")
 
-        for error in errors:
-            logging.debug(LOG_SKIPP_PEP.format(error))
+    for error in errors:
+        logging.debug(LOG_SKIPP_PEP.format(error))
 
-        return prepare_pep_results(status_counter, status_mismatches)
-
-    except Exception as e:
-        logging.error(LOG_CRITICAL_ERROR.format(str(e)))
-        return None
+    return prepare_pep_results(status_counter, status_mismatches)
 
 
 def get_pep_status(session, pep_url):
